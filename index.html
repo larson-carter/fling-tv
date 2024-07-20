@@ -131,6 +131,13 @@
         player.on('error', (e) => {
             console.error('Video.js error:', e);
         });
+
+    // Listen for pause-video event from the main process
+    window.api.on('pause-video', () => {
+      console.log('Pause video event received');
+      player.pause();
+    });
     </script>
+    <script src="preload.js" defer></script>
 </body>
 </html>

@@ -1,27 +1,38 @@
 // Modules to control application life and create native browser window
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('node:path')
 
 require('./mdns')
 require('./server')
 
+let mainWindow;
+
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      //nodeIntegration: false,
-      //contextIsolation: true,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      nodeIntegration: false,
     }
-  })
+  });
 
   // and load the index.html of the app.
   mainWindow.loadFile('index.html')
 
+  ipcMain.on('pause-video', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('pause-video');
+    }
+  });
+
+  global.mainWindow = mainWindow;
+
   // Open the DevTools.
-  //mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
 
   // HERE IS THE FLING STUFF:
   //mainWindow.loadURL('http://localhost')
@@ -50,3 +61,5 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+console.log('Main window:', global.mainWindow);

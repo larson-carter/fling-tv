@@ -148,10 +148,13 @@ router.get('/hls/:segment', (req, res) => {
   res.sendFile(segmentPath);
 });
 
-// Route to pause video
 router.post('/fling/pause', (req, res) => {
-  isPlaying = false;
-  res.json({ message: 'Video paused' });
+  if (global.mainWindow) {
+    global.mainWindow.webContents.send('pause-video');
+    res.json({ message: 'Video paused' });
+  } else {
+    res.status(500).json({ message: 'Main window not found' });
+  }
 });
 
 // Route to skip to next video
