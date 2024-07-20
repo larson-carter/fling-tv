@@ -3,7 +3,7 @@ const os = require('os');
 
 // Advertise the Fling service on port 80
 const service = bonjour.publish({
-  name: `${os.hostname()}'s Fling`,
+  name: `Larson's Fling`,
   type: 'fling',
   port: 80,
 });
