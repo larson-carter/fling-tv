@@ -29,6 +29,12 @@ const createWindow = () => {
     }
   });
 
+  ipcMain.on('play-video', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('play-video');
+    }
+  });
+
   global.mainWindow = mainWindow;
 
   // Open the DevTools.

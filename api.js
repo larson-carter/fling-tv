@@ -157,6 +157,14 @@ router.post('/fling/pause', (req, res) => {
   }
 });
 
+// Route to play video
+router.post('/fling/play', (req, res) => {
+  if (global.mainWindow) {
+    global.mainWindow.webContents.send('play-video');
+  }
+  res.json({ message: 'Video playing' });
+});
+
 // Route to skip to next video
 router.post('/fling/skip', (req, res) => {
   if (urlStorage.length > 0) {

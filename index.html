@@ -137,6 +137,11 @@
       console.log('Pause video event received');
       player.pause();
     });
+
+    window.api.on('play-video', () => {
+      console.log('Play video event received');
+      player.play();
+    });
     </script>
     <script src="preload.js" defer></script>
 </body>
