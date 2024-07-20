@@ -1,0 +1,14 @@
+{
+  "name": "fling-tv",
+  "version": "1.0.0",
+  "description": "Fling TV",
+  "main": "main.js",
+  "author": "Larson Carter",
+  "packageManager": "yarn@4.3.1",
+  "devDependencies": {
+    "electron": "^31.2.1"
+  },
+  "scripts": {
+    "start": "electron ."
+  }
+}
