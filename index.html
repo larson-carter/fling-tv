@@ -1,16 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8">
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
-    <title>Hello World!</title>
-  </head>
-  <body>
-    <h1>Hello World!</h1>
-    We are using Node.js <span id="node-version"></span>,
-    Chromium <span id="chrome-version"></span>,
-    and Electron <span id="electron-version"></span>.
-  </body>
-  <script src="./renderer.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fling Video Player</title>
+    <link href="https://vjs.zencdn.net/8.16.1/video-js.css" rel="stylesheet">
+    <script src="https://vjs.zencdn.net/8.16.1/video.min.js"></script>
+    <script src="https://unpkg.com/@videojs/http-streaming@3.10.0/dist/videojs-http-streaming.min.js"></script>
+</head>
+<body>
+    <video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="264">
+        <source id="videoSource" src="http://localhost:3000/hls/video.m3u8" type="application/x-mpegURL">
+    </video>
+    <div>
+        <button id="playBtn">Play</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="skipBtn">Skip</button>
+    </div>
+
+    <script>
+        // Initialize the Video.js player with VHS
+        var player = videojs('video', {
+            html5: {
+                vhs: {}
+            }
+        });
+
+        // Log when the video starts playing
+        player.on('play', () => {
+            console.log('Video is playing');
+        });
+
+        // Log errors
+        player.on('error', (e) => {
+            console.error('Video.js error:', e);
+        });
+
+        // Function to check if the video is available
+        function checkVideoAvailability() {
+            fetch('http://localhost/api/fling/check-video')
+                .then(response => {
+                    if (response.status === 200) {
+                        // Video is available
+                        console.log('Video is available');
+                        // Update the player source if needed
+                        player.src({ src: 'http://localhost:80/hls/video.m3u8', type: 'application/x-mpegURL' });
+                    } else {
+                        console.log('Video not available');
+                    }
+                })
+                .catch(error => console.error('Error checking video availability:', error));
+        }
+
+        // Poll every 5 seconds to check for the video
+        setInterval(checkVideoAvailability, 5000);
+
+        // Play button event listener
+        document.getElementById('playBtn').addEventListener('click', function() {
+            fetch('/api/play', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    player.play();
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        // Pause button event listener
+        document.getElementById('pauseBtn').addEventListener('click', function() {
+            fetch('/api/pause', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    player.pause();
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        // Skip button event listener
+        document.getElementById('skipBtn').addEventListener('click', function() {
+            fetch('/api/skip', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    // Implement skip logic
+                    console.log('Skipping to next video or segment');
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
 </html>
