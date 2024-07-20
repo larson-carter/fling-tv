@@ -9,6 +9,14 @@ app.get('/', (req, res) => {
       message: `Hello from Electron! The device is flingable at ${hostname}`,
       hostname: hostname
     });
+});
+
+app.get('/flingable', (req, res) => {
+    const hostname = os.hostname();
+    res.json({
+      message: `The device is flingable at ${hostname}`,
+      hostname: hostname
+    });
   });
 
 app.listen(port, () => {
