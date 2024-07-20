@@ -10,30 +10,21 @@
 </head>
 <body>
     <video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="264">
-        <source id="videoSource" src="http://localhost:3000/hls/video.m3u8" type="application/x-mpegURL">
+        <source src="http://localhost:80/hls/video.m3u8" type="application/x-mpegURL">
     </video>
-    <div>
-        <button id="playBtn">Play</button>
-        <button id="pauseBtn">Pause</button>
-        <button id="skipBtn">Skip</button>
-    </div>
+    <button id="playButton">Play</button>
+    <button id="pauseButton">Pause</button>
+    <button id="skipButton">Skip</button>
 
     <script>
+        let isPlaying = false;
+        let intervalId;
+
         // Initialize the Video.js player with VHS
         var player = videojs('video', {
             html5: {
                 vhs: {}
             }
-        });
-
-        // Log when the video starts playing
-        player.on('play', () => {
-            console.log('Video is playing');
-        });
-
-        // Log errors
-        player.on('error', (e) => {
-            console.error('Video.js error:', e);
         });
 
         // Function to check if the video is available
@@ -43,8 +34,12 @@
                     if (response.status === 200) {
                         // Video is available
                         console.log('Video is available');
-                        // Update the player source if needed
-                        player.src({ src: 'http://localhost:80/hls/video.m3u8', type: 'application/x-mpegURL' });
+                        if (!isPlaying) {
+                            // Update the player source if needed
+                            player.src({ src: 'http://localhost:80/hls/video.m3u8', type: 'application/x-mpegURL' });
+                            player.play(); // Start playing the video
+                            isPlaying = true; // Update state
+                        }
                     } else {
                         console.log('Video not available');
                     }
@@ -52,38 +47,57 @@
                 .catch(error => console.error('Error checking video availability:', error));
         }
 
-        // Poll every 5 seconds to check for the video
-        setInterval(checkVideoAvailability, 5000);
+        // Function to start polling for video availability
+        function startPolling() {
+            if (!isPlaying) {
+                intervalId = setInterval(checkVideoAvailability, 5000);
+            }
+        }
 
-        // Play button event listener
-        document.getElementById('playBtn').addEventListener('click', function() {
-            fetch('/api/play', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    player.play();
-                })
-                .catch(error => console.error('Error:', error));
+        // Function to stop polling
+        function stopPolling() {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        }
+
+        // Poll for video availability when the page loads
+        startPolling();
+
+        // Button event listeners
+        document.getElementById('playButton').addEventListener('click', () => {
+            player.play();
+            isPlaying = true;
+            stopPolling(); // Stop polling if the video is playing
         });
 
-        // Pause button event listener
-        document.getElementById('pauseBtn').addEventListener('click', function() {
-            fetch('/api/pause', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    player.pause();
-                })
-                .catch(error => console.error('Error:', error));
+        document.getElementById('pauseButton').addEventListener('click', () => {
+            player.pause();
+            isPlaying = false;
+            startPolling(); // Start polling again if paused
         });
 
-        // Skip button event listener
-        document.getElementById('skipBtn').addEventListener('click', function() {
-            fetch('/api/skip', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    // Implement skip logic
-                    console.log('Skipping to next video or segment');
-                })
-                .catch(error => console.error('Error:', error));
+        document.getElementById('skipButton').addEventListener('click', () => {
+            player.currentTime(player.currentTime() + 10);
+        });
+
+        // Log when the video starts playing
+        player.on('play', () => {
+            isPlaying = true;
+            console.log('Video is playing');
+            stopPolling(); // Stop polling if the video starts playing
+        });
+
+        // Log when the video is paused
+        player.on('pause', () => {
+            isPlaying = false;
+            console.log('Video is paused');
+            startPolling(); // Resume polling if the video is paused
+        });
+
+        // Log errors
+        player.on('error', (e) => {
+            console.error('Video.js error:', e);
         });
     </script>
 </body>
