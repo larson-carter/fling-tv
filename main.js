@@ -35,6 +35,12 @@ const createWindow = () => {
     }
   });
 
+  ipcMain.on('skip-video', (event, seconds) => {
+    if (mainWindow) {
+      mainWindow.webContents.send('skip-video', seconds);
+    }
+  });
+
   global.mainWindow = mainWindow;
 
   // Open the DevTools.

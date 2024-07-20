@@ -165,15 +165,24 @@ router.post('/fling/play', (req, res) => {
   res.json({ message: 'Video playing' });
 });
 
-// Route to skip to next video
+// Route to skip video
 router.post('/fling/skip', (req, res) => {
-  if (urlStorage.length > 0) {
-    currentIndex = (currentIndex + 1) % urlStorage.length;
-    isPlaying = true;
-    res.json({ message: 'Skipped to next video', url: urlStorage[currentIndex] });
-  } else {
-    res.status(400).json({ message: 'No content' });
+  if (global.mainWindow) {
+    global.mainWindow.webContents.send('skip-video');
   }
+  res.json({ message: `Video skipped` });
 });
+
+// THIS IS THE OLD VERSION OF SKIP.
+// // Route to skip to next video
+// router.post('/fling/skip', (req, res) => {
+//   if (urlStorage.length > 0) {
+//     currentIndex = (currentIndex + 1) % urlStorage.length;
+//     isPlaying = true;
+//     res.json({ message: 'Skipped to next video', url: urlStorage[currentIndex] });
+//   } else {
+//     res.status(400).json({ message: 'No content' });
+//   }
+// });
 
 module.exports = router;
