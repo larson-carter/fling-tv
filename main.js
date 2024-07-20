@@ -21,7 +21,7 @@ const createWindow = () => {
   mainWindow.loadFile('index.html')
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools()
+  //mainWindow.webContents.openDevTools()
 
   // HERE IS THE FLING STUFF:
   //mainWindow.loadURL('http://localhost')
