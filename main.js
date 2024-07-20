@@ -18,13 +18,13 @@ const createWindow = () => {
   })
 
   // and load the index.html of the app.
-  //mainWindow.loadFile('index.html')
+  mainWindow.loadFile('index.html')
 
   // Open the DevTools.
-  //mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
 
   // HERE IS THE FLING STUFF:
-  mainWindow.loadURL('http://localhost')
+  //mainWindow.loadURL('http://localhost')
 
 }
 
