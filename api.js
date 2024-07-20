@@ -11,7 +11,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 // In-memory storage for URLs
 const urlStorage = [];
 let currentIndex = 0;
-let isPlaying = false;
+//let isPlaying = false;
 
 // Ensure HLS directory exists
 const hlsDir = path.join(__dirname, 'hls');
@@ -151,6 +151,7 @@ router.get('/hls/:segment', (req, res) => {
 router.post('/fling/pause', (req, res) => {
   if (global.mainWindow) {
     global.mainWindow.webContents.send('pause-video');
+    isPlaying = false;
     res.json({ message: 'Video paused' });
   } else {
     res.status(500).json({ message: 'Main window not found' });
@@ -162,6 +163,7 @@ router.post('/fling/play', (req, res) => {
   if (global.mainWindow) {
     global.mainWindow.webContents.send('play-video');
   }
+  isPlaying = true;
   res.json({ message: 'Video playing' });
 });
 
@@ -171,6 +173,12 @@ router.post('/fling/skip', (req, res) => {
     global.mainWindow.webContents.send('skip-video');
   }
   res.json({ message: `Video skipped` });
+});
+
+// Determine if any content is playing or if it is paused.
+router.get('/fling/isPlaying', async (req, res) => {
+  const isPlaying = await global.mainWindow.webContents.executeJavaScript('window.isPlaying');
+  res.json({ isPlaying });
 });
 
 // THIS IS THE OLD VERSION OF SKIP.

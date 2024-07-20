@@ -49,7 +49,7 @@
         <button id="skipButton">Skip</button>
     </div>
     <script>
-        let isPlaying = false;
+        //let isPlaying = false;
         let intervalId;
 
         // Initialize the Video.js player with VHS
@@ -66,11 +66,11 @@
                     if (response.status === 200) {
                         // Video is available
                         console.log('Video is available');
-                        if (!isPlaying) {
+                        if (!window.isPlaying) {
                             // Update the player source if needed
                             player.src({ src: 'http://localhost:80/hls/video.m3u8', type: 'application/x-mpegURL' });
                             player.play(); // Start playing the video
-                            isPlaying = true; // Update state
+                            window.isPlaying = true; // Update state
                         }
                     } else {
                         console.log('Video not available');
@@ -81,7 +81,7 @@
 
         // Function to start polling for video availability
         function startPolling() {
-            if (!isPlaying) {
+            if (!window.isPlaying) {
                 intervalId = setInterval(checkVideoAvailability, 5000);
             }
         }
@@ -99,13 +99,13 @@
         // Button event listeners
         document.getElementById('playButton').addEventListener('click', () => {
             player.play();
-            isPlaying = true;
+            window.isPlaying = true;
             stopPolling(); // Stop polling if the video is playing
         });
 
         document.getElementById('pauseButton').addEventListener('click', () => {
             player.pause();
-            isPlaying = false;
+            window.isPlaying = false;
             startPolling(); // Start polling again if paused
         });
 
@@ -115,14 +115,14 @@
 
         // Log when the video starts playing
         player.on('play', () => {
-            isPlaying = true;
+            window.isPlaying = true;
             console.log('Video is playing');
             stopPolling(); // Stop polling if the video starts playing
         });
 
         // Log when the video is paused
         player.on('pause', () => {
-            isPlaying = false;
+            window.isPlaying = false;
             console.log('Video is paused');
             startPolling(); // Resume polling if the video is paused
         });

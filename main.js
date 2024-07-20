@@ -41,6 +41,11 @@ const createWindow = () => {
     }
   });
 
+    // Handle requests to get the current video status
+    ipcMain.handle('get-is-playing', () => {
+      return global.isPlaying;
+    });
+
   global.mainWindow = mainWindow;
 
   // Open the DevTools.
