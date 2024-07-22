@@ -51,6 +51,7 @@
     <script>
         //let isPlaying = false;
         let intervalId;
+        let hasDiscoveredM3U = false;
 
         // Initialize the Video.js player with VHS
         var player = videojs('video', {
@@ -71,6 +72,7 @@
                             player.src({ src: 'http://localhost:80/hls/video.m3u8', type: 'application/x-mpegURL' });
                             player.play(); // Start playing the video
                             window.isPlaying = true; // Update state
+                            hasDiscoveredM3U = true;
                         }
                     } else {
                         console.log('Video not available');
@@ -81,7 +83,7 @@
 
         // Function to start polling for video availability
         function startPolling() {
-            if (!window.isPlaying) {
+            if (!window.isPlaying && !hasDiscoveredM3U) {
                 intervalId = setInterval(checkVideoAvailability, 5000);
             }
         }
