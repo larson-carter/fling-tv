@@ -161,9 +161,23 @@ router.get('/fling', async (req, res) => {
   }
 });
 
-// Route to retrieve all stored URLs
-router.get('/fling/urls', (req, res) => {
-  res.json({ urls: urlStorage });
+// Route to retrieve all stored URLs with metadata
+router.get('/fling/urls', async (req, res) => {
+  try {
+    const details = await Promise.all(urlStorage.map(async (url) => {
+      const info = await ytdl.getInfo(url);
+      return {
+        title: info.videoDetails.title,
+        url: url,
+        thumbnail: info.videoDetails.thumbnails[0].url
+      };
+    }));
+
+    res.json({ videos: details });
+  } catch (error) {
+    console.error('Error fetching video details:', error);
+    res.status(500).json({ message: 'Error fetching video details' });
+  }
 });
 
 // Route to stream video as HLS (M3U8)
