@@ -11,7 +11,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 // In-memory storage for URLs
 const urlStorage = [];
 let currentIndex = 0;
-//let isPlaying = false;
+let isPlaying = false;
 
 // Ensure HLS directory exists
 const hlsDir = path.join(__dirname, 'hls');
@@ -19,50 +19,42 @@ if (!fs.existsSync(hlsDir)) {
   fs.mkdirSync(hlsDir);
 }
 
-router.get('/fling/check-video', (req, res) => {
-    // Logic to check if the video file exists
-    // For example, check if the m3u8 file exists
-    //const fs = require('fs');
-    const filePath = path.join(hlsDir, 'video.m3u8');
-    console.log(filePath);
-    
-    fs.access(filePath, fs.constants.F_OK, (err) => {
-        if (err) {
-            // File does not exist
-            res.status(404).send('Video not available');
-        } else {
-            // File exists
-            res.status(200).send('Video available');
-        }
-    });
-});
-
-// Route to store YouTube URLs
-router.get('/fling', async (req, res) => {
-  const url = req.query.url;
-  if (url) {
-    if (ytdl.validateURL(url)) {
-      urlStorage.push(url);
-      console.log(`New URL added: ${url}`);
-      fetch('http://localhost/api/fling/play')
-      res.json({ message: 'YouTube URL stored successfully', urls: urlStorage });
-    } else {
-      res.status(400).json({ message: 'Invalid YouTube URL' });
+// Function to clean up old files
+function cleanUpFiles(callback) {
+  fs.readdir(hlsDir, (err, files) => {
+    if (err) {
+      console.error('Error reading directory:', err);
+      if (callback) callback(); // Call callback even if there was an error
+      return;
     }
-  } else {
-    res.status(400).json({ message: 'URL parameter is missing' });
-  }
-});
+    
+    let fileCount = files.length;
+    if (fileCount === 0) {
+      if (callback) callback(); // Call callback if there are no files to delete
+      return;
+    }
 
-// Route to retrieve all stored URLs
-router.get('/fling/urls', (req, res) => {
-  res.json({ urls: urlStorage });
-});
+    files.forEach(file => {
+      const filePath = path.join(hlsDir, file);
+      fs.unlink(filePath, err => {
+        if (err) {
+          console.error(`Error deleting file ${filePath}:`, err);
+        } else {
+          console.log(`Deleted file ${filePath}`);
+        }
 
-// Route to stream video as HLS (M3U8)
-router.get('/fling/play', async (req, res) => {
+        fileCount--;
+        if (fileCount === 0) {
+          if (callback) callback(); // Call callback after all files are deleted
+        }
+      });
+    });
+  });
+}
+
+// Function to play the next video
+function playNextVideo() {
   if (urlStorage.length > 0) {
-    isPlaying = true;
     const url = urlStorage[currentIndex];
     console.log(`Streaming video from URL: ${url}`);
 
@@ -80,7 +72,6 @@ router.get('/fling/play', async (req, res) => {
       });
     } catch (error) {
       console.error('Error fetching stream:', error);
-      res.status(500).send('Error fetching video stream');
       return;
     }
 
@@ -91,16 +82,7 @@ router.get('/fling/play', async (req, res) => {
       fs.mkdirSync(outputDir);
     }
 
-    // Clean up old segments and playlist
-    fs.readdir(outputDir, (err, files) => {
-      if (err) throw err;
-      for (const file of files) {
-        fs.unlink(path.join(outputDir, file), err => {
-          if (err) throw err;
-        });
-      }
-    });
-
+    // Start processing the stream with ffmpeg
     ffmpeg(stream)
       .outputOptions([
         '-preset veryfast',
@@ -128,15 +110,68 @@ router.get('/fling/play', async (req, res) => {
       })
       .on('end', () => {
         console.log('Streaming completed');
-        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-        res.sendFile(outputPath);
+
+        // Notify the client to play the next video
+        if (global.mainWindow) {
+          global.mainWindow.webContents.send('play-next-video');
+        }
       })
       .on('error', (err, stdout, stderr) => {
         console.error('Error streaming video:', err);
         console.error('ffmpeg stderr:', stderr);
-        res.status(500).send('Error streaming video');
       })
       .run();
+  }
+}
+
+// Route to check if video is available
+router.get('/fling/check-video', (req, res) => {
+    const filePath = path.join(hlsDir, 'video.m3u8');
+    console.log(filePath);
+    
+    fs.access(filePath, fs.constants.F_OK, (err) => {
+        if (err) {
+            res.status(404).send('Video not available');
+        } else {
+            res.status(200).send('Video available');
+        }
+    });
+});
+
+// Route to store YouTube URLs
+router.get('/fling', async (req, res) => {
+  const url = req.query.url;
+  if (url) {
+    if (ytdl.validateURL(url)) {
+      urlStorage.push(url);
+      console.log(`New URL added: ${url}`);
+
+      // Start playing the new video if no video is currently playing
+      if (!isPlaying) {
+        isPlaying = true;
+        playNextVideo();
+      }
+      
+      res.json({ message: 'YouTube URL stored successfully', urls: urlStorage });
+    } else {
+      res.status(400).json({ message: 'Invalid YouTube URL' });
+    }
+  } else {
+    res.status(400).json({ message: 'URL parameter is missing' });
+  }
+});
+
+// Route to retrieve all stored URLs
+router.get('/fling/urls', (req, res) => {
+  res.json({ urls: urlStorage });
+});
+
+// Route to stream video as HLS (M3U8)
+router.get('/fling/play', async (req, res) => {
+  if (urlStorage.length > 0) {
+    isPlaying = true;
+    playNextVideo();
+    res.json({ message: 'Video streaming started' });
   } else {
     res.status(400).json({ message: 'No content' });
   }
@@ -148,10 +183,11 @@ router.get('/hls/:segment', (req, res) => {
   res.sendFile(segmentPath);
 });
 
+// Route to pause video
 router.post('/fling/pause', (req, res) => {
   if (global.mainWindow) {
     global.mainWindow.webContents.send('pause-video');
-    isPlaying = false;
+    isPlaying = false; // Update isPlaying state
     res.json({ message: 'Video paused' });
   } else {
     res.status(500).json({ message: 'Main window not found' });
@@ -162,17 +198,27 @@ router.post('/fling/pause', (req, res) => {
 router.post('/fling/play', (req, res) => {
   if (global.mainWindow) {
     global.mainWindow.webContents.send('play-video');
+    isPlaying = true; // Update isPlaying state
   }
-  isPlaying = true;
   res.json({ message: 'Video playing' });
 });
 
 // Route to skip video
 router.post('/fling/skip', (req, res) => {
-  if (global.mainWindow) {
-    global.mainWindow.webContents.send('skip-video');
+  if (urlStorage.length > 0) {
+    // Clean up existing files
+    cleanUpFiles(() => {
+      // Move to the next video
+      currentIndex = (currentIndex + 1) % urlStorage.length;
+      console.log(`Skipped to next video: ${urlStorage[currentIndex]}`);
+
+      // Trigger playing the next video
+      playNextVideo();
+      res.json({ message: 'Skipped to next video', url: urlStorage[currentIndex] });
+    });
+  } else {
+    res.status(400).json({ message: 'No content' });
   }
-  res.json({ message: `Video skipped` });
 });
 
 // Determine if any content is playing or if it is paused.
@@ -180,17 +226,5 @@ router.get('/fling/isPlaying', async (req, res) => {
   const isPlaying = await global.mainWindow.webContents.executeJavaScript('window.isPlaying');
   res.json({ isPlaying });
 });
-
-// THIS IS THE OLD VERSION OF SKIP.
-// // Route to skip to next video
-// router.post('/fling/skip', (req, res) => {
-//   if (urlStorage.length > 0) {
-//     currentIndex = (currentIndex + 1) % urlStorage.length;
-//     isPlaying = true;
-//     res.json({ message: 'Skipped to next video', url: urlStorage[currentIndex] });
-//   } else {
-//     res.status(400).json({ message: 'No content' });
-//   }
-// });
 
 module.exports = router;

@@ -49,7 +49,6 @@
         <button id="skipButton">Skip</button>
     </div>
     <script>
-        //let isPlaying = false;
         let intervalId;
         let hasDiscoveredM3U = false;
 
@@ -60,18 +59,15 @@
             }
         });
 
-        // Function to check if the video is available
         function checkVideoAvailability() {
             fetch('http://localhost/api/fling/check-video')
                 .then(response => {
                     if (response.status === 200) {
-                        // Video is available
                         console.log('Video is available');
                         if (!window.isPlaying) {
-                            // Update the player source if needed
                             player.src({ src: 'http://localhost:80/hls/video.m3u8', type: 'application/x-mpegURL' });
-                            player.play(); // Start playing the video
-                            window.isPlaying = true; // Update state
+                            player.play();
+                            window.isPlaying = true;
                             hasDiscoveredM3U = true;
                         }
                     } else {
@@ -81,74 +77,98 @@
                 .catch(error => console.error('Error checking video availability:', error));
         }
 
-        // Function to start polling for video availability
+        // Listen for play-next-video event from the main process
+window.api.on('play-next-video', () => {
+  console.log('Play next video event received');
+  // Notify the backend to check if the next video is ready
+  fetch('http://localhost/api/fling/check-video')
+    .then(response => {
+      if (response.status === 200) {
+        player.src({ src: 'http://localhost:80/hls/video.m3u8', type: 'application/x-mpegURL' });
+        player.play();
+      } else {
+        console.log('Next video not ready');
+      }
+    })
+    .catch(error => console.error('Error checking next video:', error));
+});
+
+
         function startPolling() {
             if (!window.isPlaying && !hasDiscoveredM3U) {
                 intervalId = setInterval(checkVideoAvailability, 5000);
             }
         }
 
-        // Function to stop polling
         function stopPolling() {
             if (intervalId) {
                 clearInterval(intervalId);
             }
         }
 
-        // Poll for video availability when the page loads
         startPolling();
 
-        // Button event listeners
         document.getElementById('playButton').addEventListener('click', () => {
             player.play();
             window.isPlaying = true;
-            stopPolling(); // Stop polling if the video is playing
+            stopPolling();
         });
 
         document.getElementById('pauseButton').addEventListener('click', () => {
             player.pause();
             window.isPlaying = false;
-            startPolling(); // Start polling again if paused
+            startPolling();
         });
 
         document.getElementById('skipButton').addEventListener('click', () => {
             player.currentTime(player.currentTime() + 10);
         });
 
-        // Log when the video starts playing
         player.on('play', () => {
             window.isPlaying = true;
             console.log('Video is playing');
-            stopPolling(); // Stop polling if the video starts playing
+            stopPolling();
         });
 
-        // Log when the video is paused
         player.on('pause', () => {
             window.isPlaying = false;
             console.log('Video is paused');
-            startPolling(); // Resume polling if the video is paused
+            startPolling();
         });
 
-        // Log errors
         player.on('error', (e) => {
             console.error('Video.js error:', e);
         });
 
-    // Listen for pause-video event from the main process
-    window.api.on('pause-video', () => {
-      console.log('Pause video event received');
-      player.pause();
-    });
+        // Listen for pause-video event from the main process
+        window.api.on('pause-video', () => {
+            console.log('Pause video event received');
+            player.pause();
+        });
 
-    window.api.on('play-video', () => {
-      console.log('Play video event received');
-      player.play();
-    });
-    
-    window.api.on('skip-video', (event, seconds) => {
-      console.log('Skip video event received');
-      player.currentTime(player.currentTime() + (10));
-    });
+        window.api.on('play-video', () => {
+            console.log('Play video event received');
+            player.play();
+        });
+
+        window.api.on('skip-video', (event, seconds) => {
+            console.log('Skip video event received');
+            player.currentTime(player.currentTime() + (10));
+        });
+
+        // Detect when the video ends and play the next video
+        player.on('ended', () => {
+            console.log('Video ended');
+            fetch('http://localhost/api/fling/skip', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message);
+                // Handle response, such as updating the UI or logging
+            })
+            .catch(error => console.error('Error skipping video:', error));
+        });
 
     </script>
     <script src="preload.js" defer></script>
